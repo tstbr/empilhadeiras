@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Inspeção de Empilhadeira</title>
+    <!-- Tailwind CSS (Estilo) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (Para exportar Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF & autoTable (Para exportar PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- FontAwesome (Ícones) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; }
+        .btn-c-nc input[type="radio"]:checked + label { font-weight: bold; color: white; }
+        .radio-c:checked + label { background-color: #10B981; border-color: #10B981; }
+        .radio-nc:checked + label { background-color: #EF4444; border-color: #EF4444; }
+        .radio-na:checked + label { background-color: #6B7280; border-color: #6B7280; }
+        .radio-sim:checked + label { background-color: #EF4444; border-color: #EF4444; }
+        .radio-nao:checked + label { background-color: #10B981; border-color: #10B981; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Cabeçalho -->
+        <header class="bg-slate-900 text-white p-6 rounded-xl shadow-lg flex justify-between items-center flex-wrap gap-4 border-b-4 border-amber-500">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                    <i class="fa-solid fa-truck-ramp-box text-amber-500"></i>
+                    Checklist & Inspeção de Empilhadeira
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">NR 11, NR 12. TST Marcelo Picanço - Contato (48) 99969-6483 <img src="qrmarcelo.jpg" alt="Descrição" width="70" height="70"></p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg text-right border border-slate-700">
+                <span class="block text-xs text-slate-400">Data / Hora Atual</span>
+                <span id="currentDate" class="font-mono text-amber-400 font-bold"></span>
+            </div>
+        </header>
+
+        <!-- Formulário -->
+        <form id="inspectionForm" class="bg-white p-6 md:p-8 rounded-xl shadow-md space-y-6">
+            <h2 class="text-xl font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                <i class="fa-solid fa-id-card text-blue-600"></i> 1. Dados da Operação e Operador
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Modelo Empilhadeira *</label>
+                    <select id="modeloEmpilhadeira" required class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">Selecione...</option>
+                        <option value="Stihl">Stihl</option>
+                        <option value="SAS">SAS</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Número da Loja *</label>
+                    <input type="text" id="numeroLoja" required placeholder="Ex: Loja 10" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Nome do Operador *</label>
+                    <input type="text" id="nomeOperador" required placeholder="Nome completo" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Matrícula do Operador *</label>
+                    <input type="text" id="matriculaOperador" required placeholder="Ex: MAT-1234" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <h2 class="text-xl font-bold text-slate-800 border-b pb-3 pt-4 flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check text-blue-600"></i> 2. Itens de Inspeção (C / NC / NA)
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Itens gerados dinamicamente via JS -->
+                <script>
+                    const fields = [
+                        {id: 'chave', label: '1. Chave de Ignição', na: false},
+                        {id: 'buzina', label: '2. Buzina', na: false},
+                        {id: 'emergencia', label: '3. Botão Parada de Emergência', na: false},
+                        {id: 'painel', label: '4. Painel', na: false},
+                        {id: 'volante', label: '5. Volante', na: false},
+                        {id: 'freios', label: '6. Freios', na: false},
+                        {id: 'torre', label: '7. Torre', na: false},
+                        {id: 'garfos', label: '8. Garfos', na: false},
+                        {id: 'sinalSonoro', label: '9. Sinal Sonoro de Operação', na: true}
+                    ];
+                    fields.forEach(f => {
+                        document.write(`
+                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg flex flex-col justify-between">
+                                <span class="font-medium text-slate-800">${f.label}</span>
+                                <div class="flex gap-2 mt-3 btn-c-nc">
+                                    <input type="radio" id="${f.id}_C" name="${f.id}" value="C" required class="hidden radio-c">
+                                    <label for="${f.id}_C" class="flex-1 text-center py-1.5 border border-slate-300 rounded-md cursor-pointer text-slate-700 hover:bg-emerald-50 text-sm transition">C</label>
+                                    <input type="radio" id="${f.id}_NC" name="${f.id}" value="NC" class="hidden radio-nc">
+                                    <label for="${f.id}_NC" class="flex-1 text-center py-1.5 border border-slate-300 rounded-md cursor-pointer text-slate-700 hover:bg-rose-50 text-sm transition">NC</label>
+                                    ${f.na ? `
+                                        <input type="radio" id="${f.id}_NA" name="${f.id}" value="NA" class="hidden radio-na">
+                                        <label for="${f.id}_NA" class="flex-1 text-center py-1.5 border border-slate-300 rounded-md cursor-pointer text-slate-700 hover:bg-slate-200 text-sm transition">NA</label>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `);
+                    });
+                </script>
+            </div>
+
+            <h2 class="text-xl font-bold text-slate-800 border-b pb-3 pt-4 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> 3. Condições Operacionais e Falhas
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-amber-50/60 border border-amber-200 rounded-lg">
+                    <label class="block font-semibold text-slate-800 mb-2">Está com vazamentos?</label>
+                    <div class="flex gap-4 btn-c-nc">
+                        <input type="radio" id="vaz_Sim" name="vazamentos" value="Sim" required class="hidden radio-sim">
+                        <label for="vaz_Sim" class="flex-1 text-center py-2.5 bg-white border border-slate-300 rounded-lg cursor-pointer font-semibold text-slate-700 shadow-sm">Sim</label>
+                        <input type="radio" id="vaz_Nao" name="vazamentos" value="Não" class="hidden radio-nao">
+                        <label for="vaz_Nao" class="flex-1 text-center py-2.5 bg-white border border-slate-300 rounded-lg cursor-pointer font-semibold text-slate-700 shadow-sm">Não</label>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-amber-50/60 border border-amber-200 rounded-lg">
+                    <label class="block font-semibold text-slate-800 mb-2">Se apresentou alguma falha operacional antes de iniciar as operações, foi informado imediatamente aos superiores?</label>
+                    <div class="flex gap-4 btn-c-nc">
+                        <input type="radio" id="falha_Sim" name="falhaInformada" value="Sim" required class="hidden radio-nao">
+                        <label for="falha_Sim" class="flex-1 text-center py-2.5 bg-white border border-slate-300 rounded-lg cursor-pointer font-semibold text-slate-700 shadow-sm">Sim</label>
+                        <input type="radio" id="falha_Nao" name="falhaInformada" value="Não" class="hidden radio-sim">
+                        <label for="falha_Nao" class="flex-1 text-center py-2.5 bg-white border border-slate-300 rounded-lg cursor-pointer font-semibold text-slate-700 shadow-sm">Não</label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1">Orientações Técnicas / Observações</label>
+                <textarea id="orientacoesTecnicas" rows="3" class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Descreva os detalhes técnico-operacionais ou pendências de manutenção..."></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="reset" class="px-5 py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition">
+                    <i class="fa-solid fa-eraser mr-1"></i> Limpar
+                </button>
+                <button type="submit" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-floppy-disk"></i> Registrar e Salvar Dados na Página
+                </button>
+            </div>
+        </form>
+
+        <!-- Registros Salvos -->
+        <section class="bg-white p-6 md:p-8 rounded-xl shadow-md space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-4 border-b pb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-600"></i> Registros de Inspeção Salvos
+                    </h2>
+                    <p class="text-sm text-slate-500">Histórico mantido localmente na aplicação web.</p>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="exportToExcel()" class="px-4 py-2.5 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition text-sm flex items-center gap-2 shadow">
+                        <i class="fa-solid fa-file-excel"></i> Extrair / Salvar Excel
+                    </button>
+                    <button onclick="exportToPDF()" class="px-4 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition text-sm flex items-center gap-2 shadow">
+                        <i class="fa-solid fa-file-pdf"></i> Extrair / Salvar PDF
+                    </button>
+                    <button onclick="clearRecords()" class="px-3 py-2.5 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition text-sm">
+                        <i class="fa-solid fa-trash-can"></i> Limpar
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead class="bg-slate-100 border-b text-slate-700">
+                        <tr>
+                            <th class="p-3 border">Data/Hora</th>
+                            <th class="p-3 border">Modelo</th>
+                            <th class="p-3 border">Loja</th>
+                            <th class="p-3 border">Operador</th>
+                            <th class="p-3 border">Matrícula</th>
+                            <th class="p-3 border text-center">Itens NC</th>
+                            <th class="p-3 border text-center">Vazamento</th>
+                            <th class="p-3 border text-center">Falha Inf.</th>
+                            <th class="p-3 border">Orientações Técnicas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTableBody">
+                        <tr>
+                            <td colspan="9" class="p-4 text-center text-slate-400 italic">Nenhuma inspeção registrada até o momento.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Script principal de lógica de negócio -->
+    <script>
+        const STORAGE_KEY = 'forklift_inspections_v3';
+
+        function updateTime() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleString('pt-BR');
+        }
+        setInterval(updateTime, 1000); 
+        updateTime();
+
+        function getRecords() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        }
+
+        document.getElementById('inspectionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const getVal = (name) => (document.querySelector(`input[name="${name}"]:checked`)||{}).value || '';
+            
+            const record = {
+                data: new Date().toLocaleString('pt-BR'),
+                modelo: document.getElementById('modeloEmpilhadeira').value,
+                loja: document.getElementById('numeroLoja').value,
+                operador: document.getElementById('nomeOperador').value,
+                matricula: document.getElementById('matriculaOperador').value,
+                chave: getVal('chave'),
+                buzina: getVal('buzina'),
+                emergencia: getVal('emergencia'),
+                painel: getVal('painel'),
+                volante: getVal('volante'),
+                freios: getVal('freios'),
+                torre: getVal('torre'),
+                garfos: getVal('garfos'),
+                sinalSonoro: getVal('sinalSonoro'),
+                vazamentos: getVal('vazamentos'),
+                falhaInformada: getVal('falhaInformada'),
+                orientacoes: document.getElementById('orientacoesTecnicas').value || 'Nenhuma'
+            };
+
+            const records = getRecords();
+            records.unshift(record);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+
+            alert('Inspeção registrada e salva com sucesso!');
+            this.reset();
+            renderTable();
+        });
+
+        function renderTable() {
+            const records = getRecords();
+            const tbody = document.getElementById('recordsTableBody');
+
+            if (!records.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400 italic">Nenhuma inspeção registrada até o momento.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = records.map(r => {
+                const items = [r.chave, r.buzina, r.emergencia, r.painel, r.volante, r.freios, r.torre, r.garfos, r.sinalSonoro];
+                const ncCount = items.filter(v => v === 'NC').length;
+                const ncBadge = ncCount > 0 
+                    ? `<span class="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-xs">${ncCount} NC</span>`
+                    : `<span class="bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded text-xs">OK</span>`;
+
+                return `
+                    <tr class="border-b hover:bg-slate-50 transition">
+                        <td class="p-3 border font-mono text-xs">${r.data}</td>
+                        <td class="p-3 border font-bold text-slate-800">${r.modelo}</td>
+                        <td class="p-3 border">${r.loja}</td>
+                        <td class="p-3 border">${r.operador}</td>
+                        <td class="p-3 border font-mono text-xs">${r.matricula}</td>
+                        <td class="p-3 border text-center">${ncBadge}</td>
+                        <td class="p-3 border text-center font-bold ${r.vazamentos === 'Sim' ? 'text-red-600' : 'text-emerald-600'}">${r.vazamentos}</td>
+                        <td class="p-3 border text-center font-bold ${r.falhaInformada === 'Não' ? 'text-red-600' : 'text-slate-700'}">${r.falhaInformada}</td>
+                        <td class="p-3 border text-xs text-slate-600 max-w-xs truncate" title="${r.orientacoes}">${r.orientacoes}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function exportToExcel() {
+            const records = getRecords();
+            if (!records.length) {
+                alert('Não há dados para exportar!');
+                return;
+            }
+
+            const formattedData = records.map(r => ({
+                'Data/Hora': r.data,
+                'Modelo Empilhadeira': r.modelo,
+                'Número Loja': r.loja,
+                'Nome Operador': r.operador,
+                'Matrícula Operador': r.matricula,
+                'Chave de Ignição': r.chave,
+                'Buzina': r.buzina,
+                'Parada de Emergência': r.emergencia,
+                'Painel': r.painel,
+                'Volante': r.volante,
+                'Freios': r.freios,
+                'Torre': r.torre,
+                'Garfos': r.garfos,
+                'Sinal Sonoro de Operação': r.sinalSonoro,
+                'Com Vazamentos?': r.vazamentos,
+                'Falha Informada aos Superiores?': r.falhaInformada,
+                'Orientações Técnicas': r.orientacoes
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(formattedData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inspeçoes");
+
+            XLSX.writeFile(wb, `Registro_Inspeção_Empilhadeira_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function exportToPDF() {
+            const records = getRecords();
+            if (!records.length) {
+                alert('Não há dados para exportar!');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+
+            doc.setFontSize(16);
+            doc.text("Relatório de Registro de Inspeção de Empilhadeiras", 14, 15);
+            doc.setFontSize(9);
+            doc.text(`Data da extração: ${new Date().toLocaleString('pt-BR')}`, 14, 21);
+
+            const headers = [
+                ["Data", "Modelo", "Loja", "Operador", "Matrícula", "Chave", "Buzina", "Emerg.", "Painel", "Volante", "Freios", "Torre", "Garfos", "S.Son.", "Vazam.", "Falha Inf.", "Orientações Técnicas"]
+            ];
+
+            const rows = records.map(r => [
+                r.data, r.modelo, r.loja, r.operador, r.matricula,
+                r.chave, r.buzina, r.emergencia, r.painel, r.volante, r.freios, r.torre, r.garfos, r.sinalSonoro,
+                r.vazamentos, r.falhaInformada, r.orientacoes
+            ]);
+
+            doc.autoTable({
+                head: headers,
+                body: rows,
+                startY: 26,
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 1.5 },
+                headStyles: { fillColor: [15, 23, 42] }
+            });
+
+            doc.save(`Registro_Inspeção_Empilhadeira_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+
+        function clearRecords() {
+            if (confirm('Deseja realmente apagar todos os registros da aplicação?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderTable();
+            }
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
